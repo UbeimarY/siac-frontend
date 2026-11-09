@@ -19,16 +19,17 @@ html, body, #root { height: 100%; }
 body { @apply bg-slate-50 text-slate-800 antialiased; }
 
 /* Componentes base */
+@utility tarjeta { @apply rounded-2xl border border-slate-200 bg-white shadow-sm; }
+@utility btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-500 disabled:cursor-not-allowed disabled:opacity-50; }
+@utility btn-primario { @apply btn bg-marca-700 text-white hover:bg-marca-800; }
+@utility btn-secundario { @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50; }
+@utility btn-peligro { @apply btn bg-red-600 text-white hover:bg-red-700; }
+@utility btn-ia { @apply btn bg-violet-600 text-white hover:bg-violet-700; }
+@utility btn-chico { @apply px-2.5 py-1 text-xs; }
+@utility campo { @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-marca-500 focus:outline-none focus:ring-2 focus:ring-marca-100 disabled:bg-slate-50 disabled:text-slate-500; }
+@utility etiqueta { @apply mb-1 block text-sm font-medium text-slate-700; }
+
 @layer components {
-  .tarjeta { @apply rounded-2xl border border-slate-200 bg-white shadow-sm; }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-marca-500 disabled:cursor-not-allowed disabled:opacity-50; }
-  .btn-primario { @apply btn bg-marca-700 text-white hover:bg-marca-800; }
-  .btn-secundario { @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50; }
-  .btn-peligro { @apply btn bg-red-600 text-white hover:bg-red-700; }
-  .btn-ia { @apply btn bg-violet-600 text-white hover:bg-violet-700; }
-  .btn-chico { @apply px-2.5 py-1 text-xs; }
-  .campo { @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm placeholder:text-slate-400 focus:border-marca-500 focus:outline-none focus:ring-2 focus:ring-marca-100; }
-  .etiqueta { @apply mb-1 block text-sm font-medium text-slate-700; }
   .tabla { @apply w-full text-left text-sm; }
   .tabla th { @apply whitespace-nowrap border-b border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-slate-500; }
   .tabla td { @apply border-b border-slate-100 px-3 py-2.5 align-top; }
