@@ -22,7 +22,7 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { api } from '../api/cliente'
 import { useSesion } from '../auth/AuthContext'
 import { Avatar } from './ui'
@@ -150,13 +150,11 @@ export default function Layout() {
   const [menu, setMenu] = useState(false)
   const [q, setQ] = useState('')
   const navegar = useNavigate()
-  const loc = useLocation()
   const { data: conteo } = useQuery({
     queryKey: ['alertas', 'conteo'],
     queryFn: () => api.get<{ total: number; altas: number; mias: number }>('alertas/conteo/'),
     refetchInterval: 120_000,
   })
-  useEffect(() => setMenu(false), [loc.pathname])
 
   const buscar = (e: FormEvent) => {
     e.preventDefault()

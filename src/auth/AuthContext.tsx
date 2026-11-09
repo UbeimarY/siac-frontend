@@ -17,7 +17,7 @@ const Ctx = createContext<Sesion | null>(null)
 
 export function ProveedorSesion({ children }: { children: ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null)
-  const [cargando, setCargando] = useState(true)
+  const [cargando, setCargando] = useState(() => !!tokens.acceso)
 
   const recargar = useCallback(async () => {
     if (!tokens.acceso) {
@@ -37,7 +37,7 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     configurarExpiracion(() => setUsuario(null))
-    void recargar()
+    if (tokens.acceso) void recargar()
   }, [recargar])
 
   const iniciar = useCallback(async (email: string, password: string) => {
