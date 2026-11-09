@@ -23,6 +23,15 @@ function Texto({ t }: { t: string }) {
         const lineas = bloque.split('\n')
         const esLista = lineas.every((l) => /^\s*([-*•]|\d+\.)\s/.test(l))
         const fmt = (s: string) => s.split(/(\*\*[^*]+\*\*)/).map((p, k) => p.startsWith('**') ? <strong key={k}>{p.slice(2, -2)}</strong> : p)
+        if (/^#{1,6}\s/.test(bloque)) {
+          const [titulo, ...resto] = lineas
+          return (
+            <div key={i}>
+              <p className="font-semibold">{fmt(titulo.replace(/^#{1,6}\s/, ''))}</p>
+              {resto.length > 0 && <p className="whitespace-pre-wrap">{fmt(resto.join('\n'))}</p>}
+            </div>
+          )
+        }
         return esLista ? (
           <ul key={i} className="list-disc space-y-1 pl-5">{lineas.map((l, k) => <li key={k}>{fmt(l.replace(/^\s*([-*•]|\d+\.)\s/, ''))}</li>)}</ul>
         ) : <p key={i} className="whitespace-pre-wrap">{fmt(bloque)}</p>
@@ -44,7 +53,9 @@ export default function Asistente() {
     onSuccess: (r) => setMensajes((ms) => [...ms, { role: 'assistant', content: r.respuesta }]),
     onError: (e) => setMensajes((ms) => [...ms, { role: 'assistant', content: `⚠️ ${e.message}` }]),
   })
-  useEffect(() => fin.current?.scrollIntoView({ behavior: 'smooth' }), [mensajes, m.isPending])
+  useEffect(() => {
+    fin.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [mensajes, m.isPending])
 
   const enviar = (contenido: string) => {
     const c = contenido.trim()
@@ -87,7 +98,7 @@ export default function Asistente() {
           )}
           {mensajes.map((msg, i) => (
             <div key={i} className={msg.role === 'user' ? 'flex justify-end' : 'flex justify-start gap-2'}>
-              {msg.role === 'assistant' && <span className="mt-1 rounded-lg bg-violet-100 p-1.5 text-violet-700"><Sparkles className="size-4" /></span>}
+              {msg.role === 'assistant' && <span className="mt-1 self-start rounded-lg bg-violet-100 p-1.5 text-violet-700"><Sparkles className="size-4" /></span>}
               <div className={msg.role === 'user' ? 'max-w-[85%] rounded-2xl rounded-br-sm bg-marca-700 px-4 py-2.5 text-sm text-white' : 'max-w-[85%] rounded-2xl rounded-bl-sm bg-slate-100 px-4 py-2.5 text-sm text-slate-800'}>
                 {msg.role === 'user' ? msg.content : <Texto t={msg.content} />}
               </div>
