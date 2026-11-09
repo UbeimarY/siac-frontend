@@ -1,32 +1,31 @@
-# React + TypeScript + Vite
+# SIAC Monitor — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Interfaz web de la herramienta para el seguimiento del **Sistema Interno de Aseguramiento de la Calidad (SIAC)** de la Universidad Cooperativa de Colombia, campus Pasto. Consume la API de [`siac-backend`](../siac-backend).
 
-Currently, two official plugins are available:
+Trabajo de grado — Ingeniería de Software: Ubeimar Lizardo Yepes Portilla, Juan Pablo Lucero Morales y Sebastián José Rojas Betancourth.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tecnologías
 
-## React Compiler
+React 19 + TypeScript + Vite, Tailwind CSS 4, React Router, TanStack Query, Recharts y Lucide.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Pantallas
 
-## Expanding the Oxlint configuration
+Inicio de sesión · Panel del campus (indicadores clave, riesgo por programa, mapa de calor programas × factores, cumplimiento por responsable, filtros por programa, periodo, factor y responsable) · Programas y detalle con semáforo por factor · Indicadores (listado, formulario, importación Excel) y detalle (gráfico histórico, registro de valores, desglose del riesgo, historial de cambios) · Evidencias (carga por archivo o enlace con vigencia, solicitudes con fecha límite, validación, pre-revisión con IA) · Centro de alertas (atender, descartar, crear plan, sugerir plan con IA) · Planes de mejoramiento · Reportes PDF/Excel con resumen ejecutivo con IA · Asistente IA · Configuración de alertas (global y por programa) · Usuarios · Bitácora · Perfil.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+La interfaz es responsiva (escritorio, tableta y móvil) y muestra a cada perfil solo las acciones que puede realizar.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## Desarrollo
+
+```bash
+npm install
+npm run dev        # http://localhost:5173 (proxy /api → http://localhost:8000)
+npm run build
+npm run lint
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Despliegue
+
+Variable de compilación: `VITE_API_URL` = URL pública de la API (sin `/api`).
+
+- **Vercel / Netlify:** comando `npm run build`, carpeta `dist`. `vercel.json` incluye la redirección de rutas a `index.html`.
+- **Docker + Nginx:** `docker build --build-arg VITE_API_URL=https://api.tu-dominio.com -t siac-frontend .`
