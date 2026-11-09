@@ -22,7 +22,9 @@ function Editor({ cfg }: { cfg: ConfiguracionRiesgo }) {
   })
   const [d, setD] = useState<Editable>(inicial)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => setD(inicial()), [cfg.id, cfg.actualizado])
+  useEffect(() => {
+    setD(inicial())
+  }, [cfg.id, cfg.actualizado])
   const total = PESOS.reduce((s, k) => s + d[k], 0)
   const umbralesOk = 0 < d.umbral_bajo && d.umbral_bajo < d.umbral_medio && d.umbral_medio < 100
   const valido = total === 100 && umbralesOk
