@@ -1,122 +1,83 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { lazy, Suspense, type ReactNode } from 'react'
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { ProveedorSesion, useSesion } from './auth/AuthContext'
+import { ProveedorAvisos } from './components/avisos'
+import Layout from './components/Layout'
+import { Cargando } from './components/ui'
+import Login from './pages/Login'
 
-function App() {
-  const [count, setCount] = useState(0)
+const Inicio = lazy(() => import('./pages/Inicio'))
+const Programas = lazy(() => import('./pages/Programas'))
+const ProgramaDetalle = lazy(() => import('./pages/Programas').then((m) => ({ default: m.ProgramaDetalle })))
+const Indicadores = lazy(() => import('./pages/Indicadores'))
+const IndicadorDetalle = lazy(() => import('./pages/IndicadorDetalle'))
+const Evidencias = lazy(() => import('./pages/Evidencias'))
+const Alertas = lazy(() => import('./pages/Alertas'))
+const Planes = lazy(() => import('./pages/Planes'))
+const Reportes = lazy(() => import('./pages/Reportes'))
+const Asistente = lazy(() => import('./pages/Asistente'))
+const Configuracion = lazy(() => import('./pages/Configuracion'))
+const Usuarios = lazy(() => import('./pages/Usuarios'))
+const Bitacora = lazy(() => import('./pages/Bitacora'))
+const Perfil = lazy(() => import('./pages/Perfil'))
 
+const clienteConsultas = new QueryClient({
+  defaultOptions: {
+    queries: { staleTime: 30_000, retry: (n, e) => n < 1 && !(e as { estado?: number }).estado, refetchOnWindowFocus: false },
+  },
+})
+
+function Protegida({ children, global }: { children: ReactNode; global?: boolean }) {
+  const { usuario, cargando, esGlobal } = useSesion()
+  const loc = useLocation()
+  if (cargando) return <Cargando texto="Verificando sesión…" />
+  if (!usuario) return <Navigate to="/ingresar" state={{ desde: loc.pathname + loc.search }} replace />
+  if (global && !esGlobal) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
+function NoEncontrada() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    <div className="py-20 text-center">
+      <p className="text-5xl font-bold text-marca-200">404</p>
+      <p className="mt-2 text-slate-600">La página no existe.</p>
+      <Link to="/" className="btn-primario mt-6">Ir al inicio</Link>
+    </div>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <QueryClientProvider client={clienteConsultas}>
+      <ProveedorSesion>
+        <ProveedorAvisos>
+          <BrowserRouter>
+            <Suspense fallback={<Cargando />}>
+              <Routes>
+                <Route path="/ingresar" element={<Login />} />
+                <Route element={<Protegida><Layout /></Protegida>}>
+                  <Route index element={<Inicio />} />
+                  <Route path="programas" element={<Programas />} />
+                  <Route path="programas/:id" element={<ProgramaDetalle />} />
+                  <Route path="indicadores" element={<Indicadores />} />
+                  <Route path="indicadores/:id" element={<IndicadorDetalle />} />
+                  <Route path="evidencias" element={<Evidencias />} />
+                  <Route path="alertas" element={<Alertas />} />
+                  <Route path="planes" element={<Planes />} />
+                  <Route path="reportes" element={<Reportes />} />
+                  <Route path="asistente" element={<Asistente />} />
+                  <Route path="perfil" element={<Perfil />} />
+                  <Route path="configuracion" element={<Protegida global><Configuracion /></Protegida>} />
+                  <Route path="usuarios" element={<Protegida global><Usuarios /></Protegida>} />
+                  <Route path="bitacora" element={<Protegida global><Bitacora /></Protegida>} />
+                  <Route path="*" element={<NoEncontrada />} />
+                </Route>
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </ProveedorAvisos>
+      </ProveedorSesion>
+    </QueryClientProvider>
+  )
+}
