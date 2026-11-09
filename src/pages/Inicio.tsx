@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { AlertOctagon, CheckCircle2, ClipboardList, Clock, FolderOpen, Gauge } from 'lucide-react'
+import { AlertOctagon, CheckCircle2, ClipboardList, FolderOpen, Gauge } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/cliente'
 import { useFactores, usePeriodos, useProgramas, useResponsables } from '../api/consultas'
