@@ -22,9 +22,10 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../api/cliente'
 import { useSesion } from '../auth/AuthContext'
+import ErrorBoundary from './ErrorBoundary'
 import { Avatar } from './ui'
 
 const NAV = [
@@ -150,6 +151,7 @@ export default function Layout() {
   const [menu, setMenu] = useState(false)
   const [q, setQ] = useState('')
   const navegar = useNavigate()
+  const location = useLocation()
   const { data: conteo } = useQuery({
     queryKey: ['alertas', 'conteo'],
     queryFn: () => api.get<{ total: number; altas: number; mias: number }>('alertas/conteo/'),
@@ -228,7 +230,9 @@ export default function Layout() {
           </div>
         </header>
         <main id="contenido" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:py-8">
-          <Outlet />
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>
