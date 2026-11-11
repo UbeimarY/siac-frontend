@@ -104,36 +104,87 @@ export function FormularioIndicador({ inicial, cerrar }: { inicial?: Indicador; 
   )
 }
 
+type ResultadoImportacion = {
+  simulado: boolean; creados: number; actualizados: number; valores_creados: number; valores_actualizados: number
+  periodos_creados: string[]; eliminados: number; programas: string[]; errores: string[]; avisos: string[]
+}
+
 function Importar({ cerrar }: { cerrar: () => void }) {
   const qc = useQueryClient()
   const avisar = useAvisos()
+  const { data: programas } = useProgramas()
   const [archivo, setArchivo] = useState<File | null>(null)
-  const [res, setRes] = useState<{ creados: number; actualizados: number; errores: string[] } | null>(null)
+  const [programaPlantilla, setProgramaPlantilla] = useState('')
+  const [reemplazar, setReemplazar] = useState(false)
+  const [res, setRes] = useState<ResultadoImportacion | null>(null)
   const m = useMutation({
-    mutationFn: () => {
+    mutationFn: (simular: boolean) => {
       const fd = new FormData()
       fd.append('archivo', archivo!)
-      return solicitud<{ creados: number; actualizados: number; errores: string[] }>('indicadores/importar/', { method: 'POST', cuerpo: fd })
+      fd.append('simular', simular ? '1' : '0')
+      fd.append('reemplazar', reemplazar ? '1' : '0')
+      return solicitud<ResultadoImportacion>('indicadores/importar/', { method: 'POST', cuerpo: fd })
     },
     onSuccess: (r) => {
       setRes(r)
-      void qc.invalidateQueries()
+      if (!r.simulado) {
+        void qc.invalidateQueries()
+        avisar(`Importación terminada: ${r.creados + r.actualizados} indicadores y ${r.valores_creados + r.valores_actualizados} valores.`, 'ok')
+      }
     },
     onError: (e) => avisar(e.message, 'error'),
   })
+  const cambiarArchivo = (f: File | null) => { setArchivo(f); setRes(null) }
+  const simulacionLista = res?.simulado === true
   return (
-    <Modal abierto cerrar={cerrar} titulo="Importar indicadores desde Excel" pie={<>
+    <Modal abierto cerrar={cerrar} ancho="max-w-2xl" titulo="Importar indicadores y valores desde Excel" pie={<>
       <button className="btn-secundario" onClick={cerrar}>Cerrar</button>
-      <button className="btn-primario" disabled={!archivo || m.isPending} onClick={() => m.mutate()}>Importar</button></>}>
-      <p className="mb-3 text-sm text-slate-600">
-        Use la plantilla. Columnas: programa (código), factor (código), codigo, nombre, descripcion, tipo_meta (&gt;= o &lt;=), meta, unidad, periodicidad, fuente, responsable (correo). Si el código ya existe en el programa, se actualiza.
-      </p>
-      <button className="btn-secundario btn-chico mb-4" onClick={() => void descargar('indicadores/plantilla/')}><Download className="size-3.5" /> Descargar plantilla</button>
-      <input type="file" accept=".xlsx" className="campo" onChange={(e) => setArchivo(e.target.files?.[0] ?? null)} aria-label="Archivo Excel" />
+      <button className="btn-secundario" disabled={!archivo || m.isPending} onClick={() => m.mutate(true)}>Simular</button>
+      <button className="btn-primario" disabled={!archivo || m.isPending || !simulacionLista}
+        title={simulacionLista ? undefined : 'Primero simule la importación'} onClick={() => m.mutate(false)}>
+        {m.isPending ? 'Procesando…' : 'Importar'}
+      </button></>}>
+      <ol className="mb-4 list-decimal space-y-1 pl-5 text-sm text-slate-600">
+        <li>Descargue la plantilla (puede traer precargados los indicadores actuales de un programa).</li>
+        <li>Llene la hoja <strong>Indicadores</strong>; las columnas de periodo (2025-1, 2025-2…) son los valores medidos.</li>
+        <li>Suba el archivo y pulse <strong>Simular</strong> para revisar; luego <strong>Importar</strong>.</li>
+      </ol>
+      <div className="mb-4 flex flex-wrap items-end gap-2">
+        <label className="text-sm">
+          <span className="mb-1 block text-xs font-medium text-slate-500">Precargar programa (opcional)</span>
+          <select className="campo" value={programaPlantilla} onChange={(e) => setProgramaPlantilla(e.target.value)}>
+            <option value="">Plantilla vacía</option>
+            {programas?.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select>
+        </label>
+        <button className="btn-secundario btn-chico" onClick={() => void descargar('indicadores/plantilla/', programaPlantilla ? { programa: programaPlantilla } : undefined)}>
+          <Download className="size-3.5" /> Descargar plantilla
+        </button>
+      </div>
+      <input type="file" accept=".xlsx,.xlsm" className="campo" onChange={(e) => cambiarArchivo(e.target.files?.[0] ?? null)} aria-label="Archivo Excel" />
+      <label className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        <input type="checkbox" className="mt-0.5 size-4" checked={reemplazar} onChange={(e) => { setReemplazar(e.target.checked); setRes(null) }} />
+        <span><strong>Reemplazar los datos actuales</strong> de los programas que aparecen en el archivo: borra sus indicadores,
+          valores, evidencias, alertas y planes antes de importar. Úselo para quitar los datos de demostración antes de un piloto.</span>
+      </label>
       {res && (
-        <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm">
-          <p><strong>{res.creados}</strong> creados · <strong>{res.actualizados}</strong> actualizados</p>
-          {res.errores.length > 0 && <ul className="mt-2 list-disc pl-5 text-red-700">{res.errores.map((e) => <li key={e}>{e}</li>)}</ul>}
+        <div className={`mt-4 rounded-lg p-3 text-sm ${res.simulado ? 'border border-blue-200 bg-blue-50' : 'bg-emerald-50'}`}>
+          <p className="mb-1 font-semibold">{res.simulado ? 'Simulación: esto pasaría al importar (aún no se guardó nada)' : 'Importación realizada'}</p>
+          <ul className="space-y-0.5">
+            {res.programas.length > 0 && <li>Programas: {res.programas.join(', ')}</li>}
+            {res.eliminados > 0 && <li className="text-red-700">Indicadores previos eliminados: <strong>{res.eliminados}</strong></li>}
+            <li>Indicadores: <strong>{res.creados}</strong> nuevos · <strong>{res.actualizados}</strong> actualizados</li>
+            <li>Valores: <strong>{res.valores_creados}</strong> nuevos · <strong>{res.valores_actualizados}</strong> actualizados</li>
+            {res.periodos_creados.length > 0 && <li>Periodos nuevos: {res.periodos_creados.join(', ')}</li>}
+          </ul>
+          {res.errores.length > 0 && <>
+            <p className="mt-2 font-semibold text-red-700">{res.errores.length} fila(s) con error (se omiten):</p>
+            <ul className="max-h-40 list-disc overflow-auto pl-5 text-red-700">{res.errores.map((e) => <li key={e}>{e}</li>)}</ul>
+          </>}
+          {res.avisos.length > 0 && <>
+            <p className="mt-2 font-semibold text-amber-800">Avisos:</p>
+            <ul className="max-h-32 list-disc overflow-auto pl-5 text-amber-800">{res.avisos.map((e) => <li key={e}>{e}</li>)}</ul>
+          </>}
         </div>
       )}
     </Modal>
