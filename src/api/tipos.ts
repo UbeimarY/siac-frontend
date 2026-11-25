@@ -270,3 +270,70 @@ export interface SugerenciaPlan {
   fecha_inicio: string
   fecha_limite: string
 }
+
+// ---------------------------------------------------------------- IA Beta (red neuronal propia)
+export type ModoIA = 'estandar' | 'beta'
+
+export interface MetricasClasificacion {
+  exactitud: number
+  precision?: number
+  sensibilidad?: number
+  f1?: number
+  brier?: number
+  matriz?: number[][]
+  descripcion?: string
+}
+
+export interface ModeloBeta {
+  id: number
+  tipo: 'RIESGO' | 'INTENCION'
+  version: number
+  arquitectura: string
+  parametros: number
+  muestras_entrenamiento: number
+  muestras_validacion: number
+  entrenado: string
+  entrenado_por: string
+  metricas: {
+    validacion: MetricasClasificacion
+    entrenamiento: MetricasClasificacion
+    linea_base?: MetricasClasificacion
+    metodo_validacion?: string
+    indicadores?: number
+    tasa_incumplimiento?: number
+    por_intencion?: Record<string, number | null>
+    etiquetas?: string[]
+    frases?: number
+    umbral_confianza?: number
+  }
+  historial?: { perdida: number[]; perdida_val: number[]; exactitud: number[]; exactitud_val: number[]; mejor_epoca: number }
+}
+
+export interface EstadoIABeta {
+  riesgo: ModeloBeta | null
+  intencion: ModeloBeta | null
+  intenciones: Record<string, string>
+  caracteristicas: string[]
+}
+
+export interface PrediccionBeta {
+  indicador: number
+  codigo: string
+  nombre: string
+  programa: string
+  probabilidad: number
+  nivel: Nivel
+  factores: string[]
+}
+
+export interface RespuestaBeta {
+  respuesta: string
+  intencion: string | null
+  etiqueta?: string
+  confianza: number
+  alternativas: { intencion: string; etiqueta: string; confianza: number }[]
+  sugerencias?: string[]
+  programa: string | null
+  entendida?: boolean
+  entrenada: boolean
+}

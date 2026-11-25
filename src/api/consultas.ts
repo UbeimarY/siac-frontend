@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from './cliente'
-import type { Factor, Periodo, Programa, UsuarioMin } from './tipos'
+import type { EstadoIABeta, Factor, Periodo, PrediccionBeta, Programa, UsuarioMin } from './tipos'
 
 const largo = { staleTime: 5 * 60_000 }
 
@@ -15,4 +15,12 @@ export const useIndicadoresOpciones = (programa?: string | number) =>
   useQuery({
     queryKey: ['indicadores', 'opciones', programa ?? ''],
     queryFn: () => api.get<{ id: number; codigo: string; nombre: string; programa_id: number }[]>('indicadores/opciones/', { programa }),
+  })
+export const useEstadoIABeta = () =>
+  useQuery({ queryKey: ['ia-beta', 'estado'], queryFn: () => api.get<EstadoIABeta>('ia/beta/estado/') })
+export const usePrediccionesBeta = (filtros: { programa?: string | number; indicador?: string | number } = {}, activo = true) =>
+  useQuery({
+    queryKey: ['ia-beta', 'predicciones', filtros],
+    queryFn: () => api.get<{ modelo: { version: number; entrenado: string } | null; resultados: PrediccionBeta[] }>('ia/beta/predicciones/', filtros),
+    enabled: activo,
   })
