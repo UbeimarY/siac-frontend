@@ -17,6 +17,7 @@ const Alertas = lazy(() => import('./pages/Alertas'))
 const Planes = lazy(() => import('./pages/Planes'))
 const Reportes = lazy(() => import('./pages/Reportes'))
 const Asistente = lazy(() => import('./pages/Asistente'))
+const IABeta = lazy(() => import('./pages/IABeta'))
 const Configuracion = lazy(() => import('./pages/Configuracion'))
 const Usuarios = lazy(() => import('./pages/Usuarios'))
 const Bitacora = lazy(() => import('./pages/Bitacora'))
@@ -67,6 +68,7 @@ export default function App() {
                   <Route path="planes" element={<Planes />} />
                   <Route path="reportes" element={<Reportes />} />
                   <Route path="asistente" element={<Asistente />} />
+                  <Route path="ia-beta" element={<IABeta />} />
                   <Route path="perfil" element={<Perfil />} />
                   <Route path="configuracion" element={<Protegida global><Configuracion /></Protegida>} />
                   <Route path="usuarios" element={<Protegida global><Usuarios /></Protegida>} />
