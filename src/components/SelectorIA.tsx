@@ -37,6 +37,11 @@ export function useModoIA(): [ModoIA, (m: ModoIA) => void] {
   return [modo, cambiar]
 }
 
+function claseOpcion(valor: ModoIA, activo: boolean): string {
+  if (!activo) return 'text-slate-600 hover:text-slate-900'
+  return valor === 'beta' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-violet-600 text-white shadow-sm'
+}
+
 /** Interruptor «IA estándar / IA Beta» que aparece en cada pantalla donde se usa IA. */
 export function SelectorIA({ chico, estandarDisponible = true }: { chico?: boolean; estandarDisponible?: boolean }) {
   const [modo, cambiar] = useModoIA()
@@ -49,7 +54,7 @@ export function SelectorIA({ chico, estandarDisponible = true }: { chico?: boole
       {opciones.map((o) => (
         <button key={o.valor} type="button" role="radio" aria-checked={modo === o.valor} title={o.ayuda} onClick={() => cambiar(o.valor)}
           className={clsx('inline-flex items-center gap-1.5 rounded-lg font-medium transition', chico ? 'px-2 py-1' : 'px-3 py-1.5',
-            modo === o.valor ? (o.valor === 'beta' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-violet-600 text-white shadow-sm') : 'text-slate-600 hover:text-slate-900')}>
+            claseOpcion(o.valor, modo === o.valor))}>
           <o.icono className={chico ? 'size-3.5' : 'size-4'} /> {o.texto}
           {o.valor === 'beta' && <span className={clsx('rounded px-1 text-[10px] font-semibold uppercase', modo === 'beta' ? 'bg-white/20' : 'bg-emerald-100 text-emerald-700')}>beta</span>}
         </button>

@@ -82,3 +82,10 @@ export const COMPONENTES: Record<string, string> = {
   vencimiento: 'Proximidad al vencimiento',
   visita: 'Cercanía a la visita de pares',
 }
+
+/** Probabilidad en porcentaje legible: evita mostrar 100 % o 0 % en una estimación. */
+export function probabilidadTexto(p: number): string {
+  if (p > 0.99) return '>99%'
+  if (p < 0.01) return '<1%'
+  return `${Math.round(p * 100)}%`
+}

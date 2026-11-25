@@ -9,13 +9,21 @@ import type { MetricasClasificacion, ModeloBeta } from '../api/tipos'
 import { useSesion } from '../auth/AuthContext'
 import { useAvisos } from '../components/avisos'
 import { Barra, Cargando, Encabezado, Insignia, MensajeError, Selector, Vacio } from '../components/ui'
-import { fechaHora, NIVEL } from '../lib/formato'
+import { fechaHora, NIVEL, probabilidadTexto } from '../lib/formato'
 
 // Paleta categórica validada (azul / naranja) para las dos curvas de pérdida.
 const SERIE_ENTRENAMIENTO = '#2a78d6'
 const SERIE_VALIDACION = '#eb6834'
 
 const pct = (v: number | undefined) => (v === undefined || v === null ? '—' : `${(v * 100).toFixed(1)}%`)
+
+/** Valor de una métrica para la tabla: el Brier se muestra como número y el resto como porcentaje. */
+function valorMetrica(m: MetricasClasificacion | undefined, k: keyof MetricasClasificacion): string {
+  if (!m) return '—'
+  const v = m[k] as number | undefined
+  if (k === 'brier') return v === undefined ? '—' : v.toFixed(3)
+  return pct(v)
+}
 
 function Dato({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
   return <div><dt className="text-xs text-slate-500">{etiqueta}</dt><dd className="font-semibold text-slate-800">{children}</dd></div>
@@ -88,8 +96,8 @@ function ModeloRiesgo({ m }: { m: ModeloBeta }) {
             {FILAS.map(([k, texto, ayuda]) => (
               <tr key={k}>
                 <td><span title={ayuda}>{texto}</span></td>
-                <td className="text-right font-semibold">{k === 'brier' ? (v[k] as number)?.toFixed(3) : pct(v[k] as number)}</td>
-                <td className="text-right text-slate-600">{b ? (k === 'brier' ? (b[k] as number)?.toFixed(3) : pct(b[k] as number)) : '—'}</td>
+                <td className="text-right font-semibold">{valorMetrica(v, k)}</td>
+                <td className="text-right text-slate-600">{valorMetrica(b, k)}</td>
               </tr>
             ))}
           </tbody>
@@ -157,9 +165,12 @@ function Predicciones() {
           <Selector etiqueta="Nivel" valor={nivel} cambiar={setNivel} todos="Todos" opciones={(['ALTO', 'MEDIO', 'BAJO'] as const).map((n) => ({ valor: n, texto: NIVEL[n].texto }))} />
         </div>
       </div>
-      {q.isLoading ? <Cargando /> : q.error ? <MensajeError error={q.error} /> : !q.data?.modelo ? (
-        <div className="p-5"><Vacio titulo="El modelo todavía no está entrenado" icono={<BrainCircuit className="size-10" />} /></div>
-      ) : filas.length === 0 ? <p className="px-5 pb-5 text-sm text-slate-500">No hay indicadores con ese filtro.</p> : (
+      {(() => {
+        if (q.isLoading) return <Cargando />
+        if (q.error) return <MensajeError error={q.error} />
+        if (!q.data?.modelo) return <div className="p-5"><Vacio titulo="El modelo todavía no está entrenado" icono={<BrainCircuit className="size-10" />} /></div>
+        if (filas.length === 0) return <p className="px-5 pb-5 text-sm text-slate-500">No hay indicadores con ese filtro.</p>
+        return (
         <div className="overflow-x-auto">
           <table className="tabla">
             <thead><tr><th>Indicador</th><th>Programa</th><th className="w-48">Probabilidad</th><th>Nivel</th><th>Señal principal</th></tr></thead>
@@ -171,7 +182,7 @@ function Predicciones() {
                   <td>
                     <div className="flex items-center gap-2">
                       <div className="flex-1"><Barra valor={r.probabilidad * 100} color={NIVEL[r.nivel].color} /></div>
-                      <span className="w-12 text-right tabular-nums">{r.probabilidad > 0.99 ? '>99%' : r.probabilidad < 0.01 ? '<1%' : `${Math.round(r.probabilidad * 100)}%`}</span>
+                      <span className="w-12 text-right tabular-nums">{probabilidadTexto(r.probabilidad)}</span>
                     </div>
                   </td>
                   <td><Insignia clase={NIVEL[r.nivel].clase}>{NIVEL[r.nivel].texto}</Insignia></td>
@@ -188,7 +199,8 @@ function Predicciones() {
             </div>
           )}
         </div>
-      )}
+        )
+      })()}
     </section>
   )
 }

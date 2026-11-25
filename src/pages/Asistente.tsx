@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { Bot, BrainCircuit, Loader2, Send, Sparkles, Trash2 } from 'lucide-react'
+import { Bot, BrainCircuit, Loader2, Send, Sparkles, Trash2, type LucideIcon } from 'lucide-react'
 import { Fragment, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/cliente'
@@ -9,7 +9,10 @@ import { useSesion } from '../auth/AuthContext'
 import { SelectorIA, useModoIA } from '../components/SelectorIA'
 import { Cargando, Encabezado, Selector, Vacio } from '../components/ui'
 
-type Mensaje = { role: 'user' | 'assistant'; content: string; motor?: ModoIA; beta?: RespuestaBeta }
+type Mensaje = { id: number; role: 'user' | 'assistant'; content: string; motor?: ModoIA; beta?: RespuestaBeta }
+
+let ultimoId = 0
+const nuevoId = () => ++ultimoId
 
 const SUGERENCIAS: Record<ModoIA, string[]> = {
   estandar: [
@@ -28,39 +31,48 @@ const SUGERENCIAS: Record<ModoIA, string[]> = {
 
 /** Negritas (**…**) y cursivas (_…_) dentro de una línea. */
 function enLinea(s: string): ReactNode[] {
-  return s.split(/(\*\*[^*]+\*\*|_[^_]+_)/).map((p, k) => {
-    if (p.startsWith('**') && p.endsWith('**')) return <strong key={k}>{p.slice(2, -2)}</strong>
-    if (p.length > 2 && p.startsWith('_') && p.endsWith('_')) return <em key={k} className="text-slate-600">{p.slice(1, -1)}</em>
-    return <Fragment key={k}>{p}</Fragment>
+  let pos = 0 // la clave de cada fragmento es su posición en el texto, estable entre renderizados
+  return s.split(/(\*\*[^*]+\*\*|_[^_]+_)/).map((p) => {
+    const clave = `${pos}:${p}`
+    pos += p.length
+    if (p.startsWith('**') && p.endsWith('**')) return <strong key={clave}>{p.slice(2, -2)}</strong>
+    if (p.length > 2 && p.startsWith('_') && p.endsWith('_')) return <em key={clave} className="text-slate-600">{p.slice(1, -1)}</em>
+    return <Fragment key={clave}>{p}</Fragment>
   })
 }
+
+const ITEM_LISTA = /^([-*•]|\d+\.) (.*)$/
+const TITULO = /^#{1,6} (.*)$/
 
 /** Texto con formato mínimo: párrafos, títulos con #, listas con guion o número (también mezcladas con texto). */
 function Texto({ t }: { t: string }) {
   const bloques: ReactNode[] = []
-  let lista: { ordenada: boolean; items: string[] } | null = null
+  let lista = null as { ordenada: boolean; items: string[]; inicio: number } | null
+  let n = 0 // número de línea: clave estable porque el texto de un mensaje no cambia
   const cerrarLista = () => {
     if (!lista) return
-    const items = lista.items.map((l, k) => <li key={k}>{enLinea(l)}</li>)
+    const items = lista.items.map((l) => <li key={`${lista?.inicio}:${l}`}>{enLinea(l)}</li>)
+    const clave = `lista-${lista.inicio}`
     bloques.push(lista.ordenada
-      ? <ol key={bloques.length} className="list-decimal space-y-1 pl-5">{items}</ol>
-      : <ul key={bloques.length} className="list-disc space-y-1 pl-5">{items}</ul>)
+      ? <ol key={clave} className="list-decimal space-y-1 pl-5">{items}</ol>
+      : <ul key={clave} className="list-disc space-y-1 pl-5">{items}</ul>)
     lista = null
   }
   for (const linea of t.split('\n')) {
-    const m = linea.match(/^\s*([-*•]|\d+\.)\s+(.*)$/)
+    n += 1
+    const m = ITEM_LISTA.exec(linea.trimStart())
     if (m) {
       const ordenada = /\d/.test(m[1])
-      if (!lista || lista.ordenada !== ordenada) { cerrarLista(); lista = { ordenada, items: [] } }
+      if (lista?.ordenada !== ordenada) { cerrarLista(); lista = { ordenada, items: [], inicio: n } }
       lista.items.push(m[2])
       continue
     }
     cerrarLista()
     if (!linea.trim()) continue
-    const titulo = linea.match(/^#{1,6}\s+(.*)$/)
+    const titulo = TITULO.exec(linea)
     bloques.push(titulo
-      ? <p key={bloques.length} className="font-semibold">{enLinea(titulo[1])}</p>
-      : <p key={bloques.length} className="whitespace-pre-wrap">{enLinea(linea)}</p>)
+      ? <p key={`linea-${n}`} className="font-semibold">{enLinea(titulo[1])}</p>
+      : <p key={`linea-${n}`} className="whitespace-pre-wrap">{enLinea(linea)}</p>)
   }
   cerrarLista()
   return <div className="space-y-2">{bloques}</div>
@@ -83,6 +95,49 @@ function DetalleBeta({ r, enviar }: { r: RespuestaBeta; enviar: (s: string) => v
   )
 }
 
+interface PropsBienvenida {
+  modo: ModoIA
+  bloqueado: boolean
+  esGlobal: boolean
+  nombre?: string
+  acento: string
+  Icono: LucideIcon
+  usarBeta: () => void
+  enviar: (s: string) => void
+}
+
+/** Pantalla inicial del chat: avisa si la IA elegida no está lista o propone preguntas de ejemplo. */
+function Bienvenida({ modo, bloqueado, esGlobal, nombre, acento, Icono, usarBeta, enviar }: PropsBienvenida) {
+  if (bloqueado && modo === 'estandar') {
+    return (
+      <Vacio titulo="La IA estándar no está activada" icono={<Bot className="size-10" />}>
+        El administrador debe configurar la clave del proveedor de IA en el servidor. Mientras tanto puede usar la{' '}
+        <button className="font-medium text-emerald-700 underline" onClick={usarBeta}>IA Beta</button>, que funciona sin servicios externos.
+      </Vacio>
+    )
+  }
+  if (bloqueado) {
+    return (
+      <Vacio titulo="La IA Beta aún no está entrenada" icono={<BrainCircuit className="size-10" />}>
+        {esGlobal
+          ? <>Entrénela desde la página <Link to="/ia-beta" className="font-medium text-emerald-700 underline">IA Beta</Link>; tarda unos segundos.</>
+          : 'Pida a la coordinación de calidad que la entrene desde la página IA Beta.'}
+      </Vacio>
+    )
+  }
+  const hover = modo === 'beta' ? 'hover:border-emerald-300 hover:bg-emerald-50' : 'hover:border-violet-300 hover:bg-violet-50'
+  return (
+    <div className="flex h-full flex-col items-center justify-center text-center">
+      <span className={`mb-3 rounded-2xl p-3 ${acento}`}><Icono className="size-7" /></span>
+      <p className="font-medium text-slate-800">Hola, {nombre}. ¿Qué quiere saber del SIAC?</p>
+      {modo === 'beta' && <p className="mt-1 max-w-lg text-sm text-slate-500">Responde sobre alertas, indicadores, evidencias, vencimientos, planes, predicciones, programas y visitas de pares.</p>}
+      <div className="mt-5 grid w-full max-w-2xl grid-cols-1 gap-2 sm:grid-cols-2">
+        {SUGERENCIAS[modo].map((s) => <button key={s} onClick={() => enviar(s)} className={`rounded-xl border border-slate-200 p-3 text-left text-sm text-slate-700 ${hover}`}>{s}</button>)}
+      </div>
+    </div>
+  )
+}
+
 export default function Asistente() {
   const { usuario, esGlobal } = useSesion()
   const ia = useEstadoIA()
@@ -93,17 +148,17 @@ export default function Asistente() {
   const [mensajes, setMensajes] = useState<Mensaje[]>([])
   const [texto, setTexto] = useState('')
   const fin = useRef<HTMLDivElement>(null)
-  const error = (e: Error) => setMensajes((ms) => [...ms, { role: 'assistant', content: `⚠️ ${e.message}` }])
+  const error = (e: Error) => setMensajes((ms) => [...ms, { id: nuevoId(), role: 'assistant', content: `⚠️ ${e.message}` }])
   const estandar = useMutation({
     mutationFn: (hist: Mensaje[]) => api.post<{ respuesta: string }>('ia/asistente/', {
       mensajes: hist.map(({ role, content }) => ({ role, content })), programa: programa || null,
     }),
-    onSuccess: (r) => setMensajes((ms) => [...ms, { role: 'assistant', content: r.respuesta, motor: 'estandar' }]),
+    onSuccess: (r) => setMensajes((ms) => [...ms, { id: nuevoId(), role: 'assistant', content: r.respuesta, motor: 'estandar' }]),
     onError: error,
   })
   const red = useMutation({
     mutationFn: (pregunta: string) => api.post<RespuestaBeta>('ia/beta/asistente/', { mensaje: pregunta, programa: programa || null }),
-    onSuccess: (r) => setMensajes((ms) => [...ms, { role: 'assistant', content: r.respuesta, motor: 'beta', beta: r }]),
+    onSuccess: (r) => setMensajes((ms) => [...ms, { id: nuevoId(), role: 'assistant', content: r.respuesta, motor: 'beta', beta: r }]),
     onError: error,
   })
   const pendiente = estandar.isPending || red.isPending
@@ -114,13 +169,13 @@ export default function Asistente() {
   const enviar = (contenido: string) => {
     const c = contenido.trim()
     if (!c || pendiente) return
-    setMensajes((ms) => [...ms, { role: 'user', content: c }])
+    setMensajes((ms) => [...ms, { id: nuevoId(), role: 'user', content: c }])
     setTexto('')
     if (modo === 'beta') {
       red.mutate(c)
     } else {
       // La IA estándar recibe solo su propia conversación (sin errores ni respuestas de la IA Beta).
-      const hist = [...mensajes.filter((x) => x.role === 'user' || x.motor === 'estandar'), { role: 'user' as const, content: c }]
+      const hist = [...mensajes.filter((x) => x.role === 'user' || x.motor === 'estandar'), { id: 0, role: 'user' as const, content: c }]
       estandar.mutate(hist)
     }
   }
@@ -146,30 +201,12 @@ export default function Asistente() {
         </>} />
       <div className="tarjeta flex min-h-0 flex-1 flex-col">
         <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6" aria-live="polite">
-          {mensajes.length === 0 && (bloqueado ? (
-            modo === 'estandar' ? (
-              <Vacio titulo="La IA estándar no está activada" icono={<Bot className="size-10" />}>
-                El administrador debe configurar la clave del proveedor de IA en el servidor. Mientras tanto puede usar la{' '}
-                <button className="font-medium text-emerald-700 underline" onClick={() => setModo('beta')}>IA Beta</button>, que funciona sin servicios externos.
-              </Vacio>
-            ) : (
-              <Vacio titulo="La IA Beta aún no está entrenada" icono={<BrainCircuit className="size-10" />}>
-                {esGlobal ? <>Entrénela desde la página <Link to="/ia-beta" className="font-medium text-emerald-700 underline">IA Beta</Link>; tarda unos segundos.</>
-                  : 'Pida a la coordinación de calidad que la entrene desde la página IA Beta.'}
-              </Vacio>
-            )
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center text-center">
-              <span className={`mb-3 rounded-2xl p-3 ${acento}`}><Icono className="size-7" /></span>
-              <p className="font-medium text-slate-800">Hola, {usuario?.first_name}. ¿Qué quiere saber del SIAC?</p>
-              {modo === 'beta' && <p className="mt-1 max-w-lg text-sm text-slate-500">Responde sobre alertas, indicadores, evidencias, vencimientos, planes, predicciones, programas y visitas de pares.</p>}
-              <div className="mt-5 grid w-full max-w-2xl grid-cols-1 gap-2 sm:grid-cols-2">
-                {SUGERENCIAS[modo].map((s) => <button key={s} onClick={() => enviar(s)} className={`rounded-xl border border-slate-200 p-3 text-left text-sm text-slate-700 ${modo === 'beta' ? 'hover:border-emerald-300 hover:bg-emerald-50' : 'hover:border-violet-300 hover:bg-violet-50'}`}>{s}</button>)}
-              </div>
-            </div>
-          ))}
-          {mensajes.map((msg, i) => (
-            <div key={i} className={msg.role === 'user' ? 'flex justify-end' : 'flex justify-start gap-2'}>
+          {mensajes.length === 0 && (
+            <Bienvenida modo={modo} bloqueado={bloqueado} esGlobal={esGlobal} nombre={usuario?.first_name} acento={acento} Icono={Icono}
+              usarBeta={() => setModo('beta')} enviar={enviar} />
+          )}
+          {mensajes.map((msg) => (
+            <div key={msg.id} className={msg.role === 'user' ? 'flex justify-end' : 'flex justify-start gap-2'}>
               {msg.role === 'assistant' && (
                 <span className={`mt-1 self-start rounded-lg p-1.5 ${msg.motor === 'beta' ? 'bg-emerald-100 text-emerald-700' : 'bg-violet-100 text-violet-700'}`}>
                   {msg.motor === 'beta' ? <BrainCircuit className="size-4" /> : <Sparkles className="size-4" />}

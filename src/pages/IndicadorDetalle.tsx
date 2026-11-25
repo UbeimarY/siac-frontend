@@ -10,7 +10,7 @@ import { useSesion } from '../auth/AuthContext'
 import { useAvisos } from '../components/avisos'
 import { SelectorIA, useModoIA } from '../components/SelectorIA'
 import { Barra, Campo, Cargando, Insignia, MensajeError, Modal, NivelRiesgo } from '../components/ui'
-import { COMPONENTES, ESTADO_EVIDENCIA, ESTADO_INDICADOR, fecha, fechaHora, meta, NIVEL, TENDENCIA, valor } from '../lib/formato'
+import { COMPONENTES, ESTADO_EVIDENCIA, ESTADO_INDICADOR, fecha, fechaHora, meta, NIVEL, probabilidadTexto, TENDENCIA, valor } from '../lib/formato'
 import { FormularioIndicador } from './Indicadores'
 
 function RegistrarValor({ ind, cerrar }: { ind: Indicador; cerrar: () => void }) {
@@ -49,38 +49,47 @@ function RegistrarValor({ ind, cerrar }: { ind: Indicador; cerrar: () => void })
   )
 }
 
-/** Pronóstico del próximo periodo con la red neuronal de la IA Beta. */
-function PrediccionBeta({ indicador }: { indicador: number }) {
+/** Contenido de la tarjeta de pronóstico según el motor elegido y el estado del modelo. */
+function ContenidoPrediccion({ indicador }: { indicador: number }) {
   const [modo] = useModoIA()
   const q = usePrediccionesBeta({ indicador }, modo === 'beta')
   const p = q.data?.resultados[0]
+  const nota = 'text-sm text-slate-500'
+  if (modo === 'estandar') {
+    return <p className={nota}>La IA estándar no calcula pronósticos numéricos. Cambie a <strong>IA Beta</strong> para ver la probabilidad de incumplir la meta que estima la red neuronal propia.</p>
+  }
+  if (q.isLoading) return <p className={nota}>Calculando…</p>
+  if (!q.data?.modelo) {
+    return <p className={nota}>El modelo de predicción aún no está entrenado. Puede entrenarse desde la página <Link to="/ia-beta" className="text-emerald-700 underline">IA Beta</Link>.</p>
+  }
+  if (!p) return <p className={nota}>Este indicador todavía no tiene registros para pronosticar.</p>
+  return (
+    <>
+      <div className="flex items-end justify-between">
+        <div>
+          <div className="text-xs text-slate-500">Probabilidad de incumplir la meta</div>
+          <div className="text-3xl font-bold" style={{ color: NIVEL[p.nivel].color }}>{probabilidadTexto(p.probabilidad)}</div>
+        </div>
+        <Insignia clase={NIVEL[p.nivel].clase}>Riesgo {NIVEL[p.nivel].texto.toLowerCase()}</Insignia>
+      </div>
+      <div className="mt-2"><Barra valor={p.probabilidad * 100} color={NIVEL[p.nivel].color} /></div>
+      {p.factores.length > 0 && (
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">{p.factores.map((f) => <li key={f}>{f}</li>)}</ul>
+      )}
+      <p className="mt-3 text-xs text-slate-400">Red neuronal v{q.data.modelo.version}, entrenada con el histórico de los indicadores. Es una estimación para priorizar, no un resultado.</p>
+    </>
+  )
+}
+
+/** Pronóstico del próximo periodo con la red neuronal de la IA Beta. */
+function PrediccionBeta({ indicador }: { indicador: number }) {
   return (
     <section className="tarjeta p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-semibold text-marca-900"><BrainCircuit className="size-4 text-emerald-600" /> Pronóstico del próximo periodo</h2>
         <SelectorIA chico />
       </div>
-      {modo === 'estandar' ? (
-        <p className="text-sm text-slate-500">La IA estándar no calcula pronósticos numéricos. Cambie a <strong>IA Beta</strong> para ver la probabilidad de incumplir la meta que estima la red neuronal propia.</p>
-      ) : q.isLoading ? <p className="text-sm text-slate-500">Calculando…</p>
-        : !q.data?.modelo ? <p className="text-sm text-slate-500">El modelo de predicción aún no está entrenado. Puede entrenarse desde la página <Link to="/ia-beta" className="text-emerald-700 underline">IA Beta</Link>.</p>
-        : !p ? <p className="text-sm text-slate-500">Este indicador todavía no tiene registros para pronosticar.</p>
-        : (
-          <>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-xs text-slate-500">Probabilidad de incumplir la meta</div>
-                <div className="text-3xl font-bold" style={{ color: NIVEL[p.nivel].color }}>{p.probabilidad > 0.99 ? '>99' : p.probabilidad < 0.01 ? '<1' : Math.round(p.probabilidad * 100)}%</div>
-              </div>
-              <Insignia clase={NIVEL[p.nivel].clase}>Riesgo {NIVEL[p.nivel].texto.toLowerCase()}</Insignia>
-            </div>
-            <div className="mt-2"><Barra valor={p.probabilidad * 100} color={NIVEL[p.nivel].color} /></div>
-            {p.factores.length > 0 && (
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">{p.factores.map((f) => <li key={f}>{f}</li>)}</ul>
-            )}
-            <p className="mt-3 text-xs text-slate-400">Red neuronal v{q.data.modelo.version}, entrenada con el histórico de los indicadores. Es una estimación para priorizar, no un resultado.</p>
-          </>
-        )}
+      <ContenidoPrediccion indicador={indicador} />
     </section>
   )
 }
@@ -200,8 +209,8 @@ export default function IndicadorDetalle() {
         <section className="tarjeta">
           <h2 className="flex items-center gap-2 p-5 pb-3 font-semibold text-marca-900"><History className="size-4" /> Historial de cambios</h2>
           <ul className="max-h-80 divide-y divide-slate-100 overflow-y-auto">
-            {hist.data?.length ? hist.data.map((h, k) => (
-              <li key={k} className="px-5 py-2.5 text-sm"><div>{h.accion}</div><div className="text-xs text-slate-500">{h.usuario} · {fechaHora(h.fecha)}</div></li>
+            {hist.data?.length ? hist.data.map((h) => (
+              <li key={`${h.fecha}-${h.usuario}-${h.accion}`} className="px-5 py-2.5 text-sm"><div>{h.accion}</div><div className="text-xs text-slate-500">{h.usuario} · {fechaHora(h.fecha)}</div></li>
             )) : <li className="px-5 pb-5 text-sm text-slate-500">Sin cambios registrados.</li>}
           </ul>
         </section>
