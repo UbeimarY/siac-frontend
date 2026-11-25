@@ -36,8 +36,7 @@ export function mensajeDeError(datos: unknown): string | undefined {
 
 function leer(clave: string) {
   try {
-    const v = localStorage.getItem(clave)
-    return v === null ? null : decodeURIComponent(v)
+    return localStorage.getItem(clave)
   } catch {
     return null
   }
@@ -45,7 +44,22 @@ function leer(clave: string) {
 
 // Un token JWT son tres segmentos base64url separados por puntos. Solo eso se guarda en el navegador.
 const FORMATO_JWT = /^[\w-]+\.[\w-]+\.[\w-]+$/
-const esToken = (v: unknown): v is string => typeof v === 'string' && v.length < 4096 && FORMATO_JWT.test(v)
+const ALFABETO_JWT = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.'
+
+/**
+ * Devuelve el token reconstruido solo con caracteres de la lista blanca, o null si no tiene formato JWT.
+ * Lo que se guarda sale del alfabeto permitido, nunca directamente de la respuesta recibida.
+ */
+function tokenSeguro(v: unknown): string | null {
+  if (typeof v !== 'string' || v.length > 4096 || !FORMATO_JWT.test(v)) return null
+  let limpio = ''
+  for (const c of v) {
+    const i = ALFABETO_JWT.indexOf(c)
+    if (i < 0) return null
+    limpio += ALFABETO_JWT.charAt(i)
+  }
+  return limpio
+}
 
 export const tokens = {
   get acceso() {
@@ -55,11 +69,12 @@ export const tokens = {
     return leer(CLAVE_REFRESH)
   },
   guardar(acceso: string, refresh?: string) {
-    if (!esToken(acceso) || (refresh !== undefined && !esToken(refresh))) return
+    const a = tokenSeguro(acceso)
+    const r = refresh === undefined ? undefined : tokenSeguro(refresh)
+    if (a === null || r === null) return
     try {
-      // Se guarda codificado: aunque el valor ya se validó, nunca se escribe en el navegador tal como llegó.
-      localStorage.setItem(CLAVE_ACCESO, encodeURIComponent(acceso))
-      if (refresh) localStorage.setItem(CLAVE_REFRESH, encodeURIComponent(refresh))
+      localStorage.setItem(CLAVE_ACCESO, a)
+      if (r) localStorage.setItem(CLAVE_REFRESH, r)
     } catch {
       /* almacenamiento no disponible */
     }
