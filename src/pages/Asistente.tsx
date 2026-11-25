@@ -228,7 +228,7 @@ export default function Asistente() {
         <form onSubmit={onSubmit} className="flex gap-2 border-t border-slate-100 p-3">
           <input className="campo" placeholder={bloqueado ? 'Cambie de IA para escribir…' : 'Escriba su pregunta…'} value={texto} disabled={bloqueado}
             onChange={(e) => setTexto(e.target.value)} maxLength={modo === 'beta' ? 1000 : 2000} aria-label="Pregunta para el asistente" />
-          <button className={modo === 'beta' ? 'btn bg-emerald-600 text-white hover:bg-emerald-700' : 'btn-ia'} disabled={bloqueado || !texto.trim() || pendiente} aria-label="Enviar"><Send className="size-4" /></button>
+          <button type="submit" className={modo === 'beta' ? 'btn bg-emerald-600 text-white hover:bg-emerald-700' : 'btn-ia'} disabled={bloqueado || !texto.trim() || pendiente} aria-label="Enviar"><Send className="size-4" /></button>
         </form>
       </div>
       <p className="mt-2 text-center text-xs text-slate-400">

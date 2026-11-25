@@ -42,6 +42,10 @@ function leer(clave: string) {
   }
 }
 
+// Un token JWT son tres segmentos base64url separados por puntos. Solo eso se guarda en el navegador.
+const FORMATO_JWT = /^[\w-]+\.[\w-]+\.[\w-]+$/
+const esToken = (v: unknown): v is string => typeof v === 'string' && v.length < 4096 && FORMATO_JWT.test(v)
+
 export const tokens = {
   get acceso() {
     return leer(CLAVE_ACCESO)
@@ -50,6 +54,7 @@ export const tokens = {
     return leer(CLAVE_REFRESH)
   },
   guardar(acceso: string, refresh?: string) {
+    if (!esToken(acceso) || (refresh !== undefined && !esToken(refresh))) return
     try {
       localStorage.setItem(CLAVE_ACCESO, acceso)
       if (refresh) localStorage.setItem(CLAVE_REFRESH, refresh)

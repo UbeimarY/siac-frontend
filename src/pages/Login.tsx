@@ -84,7 +84,7 @@ export default function Login() {
               {error}
             </p>
           )}
-          <button className="btn-primario w-full py-2.5 text-base" disabled={enviando || !email || !password}>
+          <button type="submit" className="btn-primario w-full py-2.5 text-base" disabled={enviando || !email || !password}>
             {enviando && <Loader2 className="size-4 animate-spin" />} Ingresar
           </button>
           <p className="text-center text-xs text-slate-500">

@@ -24,7 +24,7 @@ export default function Perfil() {
         <Campo etiqueta="Contraseña actual"><input type="password" autoComplete="current-password" className="campo" value={d.actual} onChange={(e) => setD({ ...d, actual: e.target.value })} /></Campo>
         <Campo etiqueta="Nueva contraseña" ayuda="Mínimo 8 caracteres; no puede ser común ni solo numérica"><input type="password" autoComplete="new-password" className="campo" value={d.nueva} onChange={(e) => setD({ ...d, nueva: e.target.value })} /></Campo>
         <Campo etiqueta="Confirmar nueva contraseña" error={d.confirmar && !coincide ? 'Las contraseñas no coinciden' : undefined}><input type="password" autoComplete="new-password" className="campo" value={d.confirmar} onChange={(e) => setD({ ...d, confirmar: e.target.value })} /></Campo>
-        <button className="btn-primario" disabled={!d.actual || d.nueva.length < 8 || !coincide || m.isPending}>Actualizar contraseña</button>
+        <button type="submit" className="btn-primario" disabled={!d.actual || d.nueva.length < 8 || !coincide || m.isPending}>Actualizar contraseña</button>
       </form>
     </>
   )

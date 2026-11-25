@@ -97,20 +97,21 @@ export function Modal({
   }, [abierto, cerrar])
   if (!abierto) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 sm:items-center sm:p-4" onMouseDown={cerrar}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+      {/* Fondo: un botón nativo, así cerrar con el ratón o con el tacto es accesible */}
+      <button type="button" aria-label="Cerrar" tabIndex={-1} className="absolute inset-0 cursor-default bg-slate-900/50" onClick={cerrar} />
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
         aria-labelledby={id}
-        className={clsx('flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl', ancho)}
-        onMouseDown={(e) => e.stopPropagation()}
+        className={clsx('relative flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl', ancho)}
       >
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <h2 id={id} className="text-lg font-semibold text-marca-900">
             {titulo}
           </h2>
-          <button onClick={cerrar} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Cerrar">
+          <button type="button" onClick={cerrar} className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Cerrar">
             <X className="size-5" />
           </button>
         </div>

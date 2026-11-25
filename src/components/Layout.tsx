@@ -184,7 +184,7 @@ export default function Layout() {
       {/* Menú deslizable en móvil y tableta */}
       {menu && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-slate-900/50" onClick={() => setMenu(false)} />
+          <button type="button" aria-label="Cerrar menú" tabIndex={-1} className="absolute inset-0 cursor-default bg-slate-900/50" onClick={() => setMenu(false)} />
           <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col bg-marca-800">
             <div className="flex items-center justify-between px-5 py-5">
               <Logo claro />
