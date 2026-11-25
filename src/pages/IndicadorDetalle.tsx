@@ -1,15 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, History, Pencil, Plus } from 'lucide-react'
+import { ArrowLeft, BrainCircuit, History, Pencil, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { api } from '../api/cliente'
-import { usePeriodos } from '../api/consultas'
+import { usePeriodos, usePrediccionesBeta } from '../api/consultas'
 import type { Evidencia, Indicador, RegistroIndicador } from '../api/tipos'
 import { useSesion } from '../auth/AuthContext'
 import { useAvisos } from '../components/avisos'
+import { SelectorIA, useModoIA } from '../components/SelectorIA'
 import { Barra, Campo, Cargando, Insignia, MensajeError, Modal, NivelRiesgo } from '../components/ui'
-import { COMPONENTES, ESTADO_EVIDENCIA, ESTADO_INDICADOR, fecha, fechaHora, meta, TENDENCIA, valor } from '../lib/formato'
+import { COMPONENTES, ESTADO_EVIDENCIA, ESTADO_INDICADOR, fecha, fechaHora, meta, NIVEL, TENDENCIA, valor } from '../lib/formato'
 import { FormularioIndicador } from './Indicadores'
 
 function RegistrarValor({ ind, cerrar }: { ind: Indicador; cerrar: () => void }) {
@@ -45,6 +46,42 @@ function RegistrarValor({ ind, cerrar }: { ind: Indicador; cerrar: () => void })
         <Campo etiqueta="Observaciones"><textarea rows={2} className="campo" value={d.observaciones} onChange={(e) => setD({ ...d, observaciones: e.target.value })} /></Campo>
       </div>
     </Modal>
+  )
+}
+
+/** Pronóstico del próximo periodo con la red neuronal de la IA Beta. */
+function PrediccionBeta({ indicador }: { indicador: number }) {
+  const [modo] = useModoIA()
+  const q = usePrediccionesBeta({ indicador }, modo === 'beta')
+  const p = q.data?.resultados[0]
+  return (
+    <section className="tarjeta p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 font-semibold text-marca-900"><BrainCircuit className="size-4 text-emerald-600" /> Pronóstico del próximo periodo</h2>
+        <SelectorIA chico />
+      </div>
+      {modo === 'estandar' ? (
+        <p className="text-sm text-slate-500">La IA estándar no calcula pronósticos numéricos. Cambie a <strong>IA Beta</strong> para ver la probabilidad de incumplir la meta que estima la red neuronal propia.</p>
+      ) : q.isLoading ? <p className="text-sm text-slate-500">Calculando…</p>
+        : !q.data?.modelo ? <p className="text-sm text-slate-500">El modelo de predicción aún no está entrenado. Puede entrenarse desde la página <Link to="/ia-beta" className="text-emerald-700 underline">IA Beta</Link>.</p>
+        : !p ? <p className="text-sm text-slate-500">Este indicador todavía no tiene registros para pronosticar.</p>
+        : (
+          <>
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-xs text-slate-500">Probabilidad de incumplir la meta</div>
+                <div className="text-3xl font-bold" style={{ color: NIVEL[p.nivel].color }}>{p.probabilidad > 0.99 ? '>99' : p.probabilidad < 0.01 ? '<1' : Math.round(p.probabilidad * 100)}%</div>
+              </div>
+              <Insignia clase={NIVEL[p.nivel].clase}>Riesgo {NIVEL[p.nivel].texto.toLowerCase()}</Insignia>
+            </div>
+            <div className="mt-2"><Barra valor={p.probabilidad * 100} color={NIVEL[p.nivel].color} /></div>
+            {p.factores.length > 0 && (
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">{p.factores.map((f) => <li key={f}>{f}</li>)}</ul>
+            )}
+            <p className="mt-3 text-xs text-slate-400">Red neuronal v{q.data.modelo.version}, entrenada con el histórico de los indicadores. Es una estimación para priorizar, no un resultado.</p>
+          </>
+        )}
+    </section>
   )
 }
 
@@ -125,6 +162,7 @@ export default function IndicadorDetalle() {
             </div>
           )}
         </section>
+        <div className="flex flex-col gap-6">
         <section className="tarjeta p-5">
           <h2 className="mb-1 font-semibold text-marca-900">Desglose del índice de riesgo</h2>
           <p className="mb-4 text-xs text-slate-500">Cada componente aporta factor × peso al índice (0–100).</p>
@@ -140,6 +178,8 @@ export default function IndicadorDetalle() {
             </ul>
           ) : <p className="text-sm text-slate-500">Sin cálculo aún.</p>}
         </section>
+        <PrediccionBeta indicador={i.id} />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
