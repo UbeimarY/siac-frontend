@@ -94,6 +94,10 @@ function PrediccionBeta({ indicador }: { indicador: number }) {
   )
 }
 
+/**
+ * Detalle de un indicador: meta, último valor, cumplimiento, histórico, desglose del índice de riesgo por
+ * componente (el «por qué» de su nivel), evidencias, historial de cambios y el pronóstico de la IA Beta.
+ */
 export default function IndicadorDetalle() {
   const { id } = useParams()
   const { usuario, tieneRol } = useSesion()

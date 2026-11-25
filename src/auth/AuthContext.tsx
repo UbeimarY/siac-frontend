@@ -13,6 +13,8 @@ interface Sesion {
   soloLectura: boolean
 }
 
+// Contexto de sesión: cualquier pantalla sabe quién es el usuario y su rol con useSesion().
+// Ocultar botones según el rol es solo comodidad; los permisos reales se verifican en el servidor.
 const Ctx = createContext<Sesion | null>(null)
 
 export function ProveedorSesion({ children }: { children: ReactNode }) {

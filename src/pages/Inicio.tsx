@@ -27,10 +27,20 @@ function Kpi({ titulo, valor, detalle, icono: Icono, tono, a }: {
   return a ? <Link to={a} className="block">{cuerpo}</Link> : cuerpo
 }
 
+/**
+ * Color de una celda del mapa de calor según su nivel de riesgo (semáforo del motor de alertas).
+ * El valor de cada celda lo calcula el backend (apps/reportes/datos.py): agrega los índices de riesgo de los
+ * indicadores de ese programa en ese factor, la mitad con el promedio y la mitad con los tres más críticos.
+ */
 function celdaColor(nivel: Nivel | null) {
   return nivel ? { background: NIVEL[nivel].fondo, color: NIVEL[nivel].color } : { background: '#f8fafc', color: '#94a3b8' }
 }
 
+/**
+ * Tablero de control (RF-12): indicadores clave del campus, índice de riesgo por programa, mapa de calor
+ * programa × factor y alertas recientes. Los filtros viajan en la URL, así un tablero filtrado se puede compartir.
+ * Todas las cifras llegan ya filtradas por los permisos del usuario desde la API.
+ */
 export default function Inicio() {
   const { usuario } = useSesion()
   const [sp, setSp] = useSearchParams()

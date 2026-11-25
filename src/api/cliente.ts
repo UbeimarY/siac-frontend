@@ -1,4 +1,10 @@
-/** Cliente HTTP de la API del SIAC con renovación automática del token JWT. */
+/**
+ * Cliente HTTP de la API del SIAC con renovación automática del token JWT.
+ *
+ * Flujo de sesión: al iniciar sesión se guardan dos tokens. Cada petición envía el de acceso en la cabecera
+ * Authorization. Si la API responde 401 (token vencido), se pide uno nuevo con el de renovación y se repite
+ * la petición una sola vez, sin que el usuario lo note. Si tampoco se puede renovar, se cierra la sesión.
+ */
 
 const BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '') + '/api'
 
@@ -95,6 +101,7 @@ export const configurarExpiracion = (fn: () => void) => {
   alExpirar = fn
 }
 
+// Si varias peticiones vencen a la vez, comparten una sola renovación (la promesa `renovando`).
 async function renovar(): Promise<boolean> {
   const refresh = tokens.refresh
   if (!refresh) return false

@@ -12,6 +12,11 @@ import { COMPONENTES, fechaHora } from '../lib/formato'
 const PESOS = ['peso_tendencia', 'peso_brecha', 'peso_evidencia', 'peso_vencimiento', 'peso_visita'] as const
 type Editable = Pick<ConfiguracionRiesgo, (typeof PESOS)[number] | 'umbral_bajo' | 'umbral_medio' | 'dias_aviso_vencimiento' | 'horizonte_visita_dias'>
 
+/**
+ * Editor de pesos y umbrales del motor de alertas (RF-11), global o por programa. Los cinco pesos deben sumar
+ * 100. «Simular» pide al servidor cómo quedarían los índices sin guardar nada; así la coordinación ve el
+ * efecto antes de aplicar el cambio. Los criterios los define la institución, no el código.
+ */
 function Editor({ cfg }: { cfg: ConfiguracionRiesgo }) {
   const qc = useQueryClient()
   const avisar = useAvisos()

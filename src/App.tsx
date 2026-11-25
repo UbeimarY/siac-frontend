@@ -29,6 +29,7 @@ const clienteConsultas = new QueryClient({
   },
 })
 
+/** Ruta que exige sesión iniciada; con `global`, solo administración y coordinación de calidad. */
 function Protegida({ children, global }: { children: ReactNode; global?: boolean }) {
   const { usuario, cargando, esGlobal } = useSesion()
   const loc = useLocation()
