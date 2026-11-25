@@ -36,7 +36,8 @@ export function mensajeDeError(datos: unknown): string | undefined {
 
 function leer(clave: string) {
   try {
-    return localStorage.getItem(clave)
+    const v = localStorage.getItem(clave)
+    return v === null ? null : decodeURIComponent(v)
   } catch {
     return null
   }
@@ -56,8 +57,9 @@ export const tokens = {
   guardar(acceso: string, refresh?: string) {
     if (!esToken(acceso) || (refresh !== undefined && !esToken(refresh))) return
     try {
-      localStorage.setItem(CLAVE_ACCESO, acceso)
-      if (refresh) localStorage.setItem(CLAVE_REFRESH, refresh)
+      // Se guarda codificado: aunque el valor ya se validó, nunca se escribe en el navegador tal como llegó.
+      localStorage.setItem(CLAVE_ACCESO, encodeURIComponent(acceso))
+      if (refresh) localStorage.setItem(CLAVE_REFRESH, encodeURIComponent(refresh))
     } catch {
       /* almacenamiento no disponible */
     }
