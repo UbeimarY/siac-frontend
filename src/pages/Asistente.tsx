@@ -98,6 +98,7 @@ function DetalleBeta({ r, enviar }: { r: RespuestaBeta; enviar: (s: string) => v
 interface PropsBienvenida {
   modo: ModoIA
   bloqueado: boolean
+  entrenando: boolean
   esGlobal: boolean
   nombre?: string
   acento: string
@@ -107,12 +108,19 @@ interface PropsBienvenida {
 }
 
 /** Pantalla inicial del chat: avisa si la IA elegida no está lista o propone preguntas de ejemplo. */
-function Bienvenida({ modo, bloqueado, esGlobal, nombre, acento, Icono, usarBeta, enviar }: PropsBienvenida) {
+function Bienvenida({ modo, bloqueado, entrenando, esGlobal, nombre, acento, Icono, usarBeta, enviar }: PropsBienvenida) {
   if (bloqueado && modo === 'estandar') {
     return (
       <Vacio titulo="La IA estándar no está activada" icono={<Bot className="size-10" />}>
         El administrador debe configurar la clave del proveedor de IA en el servidor. Mientras tanto puede usar la{' '}
         <button className="font-medium text-emerald-700 underline" onClick={usarBeta}>IA Beta</button>, que funciona sin servicios externos.
+      </Vacio>
+    )
+  }
+  if (bloqueado && entrenando) {
+    return (
+      <Vacio titulo="La IA Beta se está entrenando" icono={<Loader2 className="size-10 animate-spin" />}>
+        Tarda uno o dos minutos. Esta pantalla se habilita sola cuando termine.
       </Vacio>
     )
   }
@@ -202,7 +210,7 @@ export default function Asistente() {
       <div className="tarjeta flex min-h-0 flex-1 flex-col">
         <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6" aria-live="polite">
           {mensajes.length === 0 && (
-            <Bienvenida modo={modo} bloqueado={bloqueado} esGlobal={esGlobal} nombre={usuario?.first_name} acento={acento} Icono={Icono}
+            <Bienvenida modo={modo} bloqueado={bloqueado} entrenando={!!beta.data?.entrenando} esGlobal={esGlobal} nombre={usuario?.first_name} acento={acento} Icono={Icono}
               usarBeta={() => setModo('beta')} enviar={enviar} />
           )}
           {mensajes.map((msg) => (

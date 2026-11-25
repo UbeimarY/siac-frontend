@@ -314,6 +314,8 @@ export interface EstadoIABeta {
   intencion: ModeloBeta | null
   intenciones: Record<string, string>
   caracteristicas: string[]
+  entrenando: boolean
+  errores_entrenamiento: Record<string, string>
 }
 
 export interface PrediccionBeta {

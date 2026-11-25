@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { BrainCircuit, Cpu, Loader2, MessagesSquare, RefreshCw, TrendingUp } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { api } from '../api/cliente'
@@ -210,15 +210,26 @@ export default function IABeta() {
   const avisar = useAvisos()
   const qc = useQueryClient()
   const q = useEstadoIABeta()
+  const entrenando = !!q.data?.entrenando
   const entrenar = useMutation({
-    mutationFn: () => api.post<{ modelos: Record<string, ModeloBeta>; errores: Record<string, string> }>('ia/beta/entrenar/', { modelo: 'TODOS' }),
-    onSuccess: (r) => {
-      void qc.invalidateQueries({ queryKey: ['ia-beta'] })
-      const v = Object.values(r.modelos).map((m) => `${m.tipo === 'RIESGO' ? 'predictor' : 'asistente'} v${m.version}`).join(' y ')
-      avisar(`IA Beta reentrenada: ${v}.${Object.keys(r.errores).length ? ' ' + Object.values(r.errores).join(' ') : ''}`)
+    mutationFn: () => api.post<{ en_curso: boolean }>('ia/beta/entrenar/', { modelo: 'TODOS' }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['ia-beta', 'estado'] })
+      avisar('Entrenamiento iniciado. Tarda uno o dos minutos; la página se actualiza sola.')
     },
     onError: (e) => avisar(e.message, 'error'),
   })
+  // Cuando termina un entrenamiento, se avisa el resultado y se refrescan las predicciones.
+  const antes = useRef(false)
+  useEffect(() => {
+    if (antes.current && !entrenando && q.data) {
+      void qc.invalidateQueries({ queryKey: ['ia-beta', 'predicciones'] })
+      const errores = Object.values(q.data.errores_entrenamiento ?? {})
+      if (errores.length) avisar(`El entrenamiento terminó con observaciones: ${errores.join(' ')}`, 'error')
+      else avisar(`IA Beta reentrenada: predictor v${q.data.riesgo?.version ?? '—'} y asistente v${q.data.intencion?.version ?? '—'}.`)
+    }
+    antes.current = entrenando
+  }, [entrenando, q.data, qc, avisar])
   if (q.isLoading) return <Cargando />
   if (q.error) return <MensajeError error={q.error} reintentar={() => void q.refetch()} />
   const d = q.data!
@@ -227,10 +238,16 @@ export default function IABeta() {
       <Encabezado titulo="IA Beta"
         subtitulo="Red neuronal propia del SIAC, programada y entrenada desde cero (NumPy), sin servicios externos."
         acciones={esGlobal && (
-          <button className="btn bg-emerald-600 text-white hover:bg-emerald-700" disabled={entrenar.isPending} onClick={() => entrenar.mutate()}>
-            {entrenar.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />} Entrenar con los datos actuales
+          <button type="button" className="btn bg-emerald-600 text-white hover:bg-emerald-700" disabled={entrenar.isPending || entrenando} onClick={() => entrenar.mutate()}>
+            {entrenar.isPending || entrenando ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+            {entrenando ? ' Entrenando…' : ' Entrenar con los datos actuales'}
           </button>
         )} />
+      {entrenando && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800" role="status">
+          <Loader2 className="size-4 animate-spin" /> Entrenando las redes neuronales con los datos actuales. Tarda uno o dos minutos; puede seguir usando el sistema.
+        </div>
+      )}
       <div className="tarjeta mb-6 flex items-start gap-3 p-5 text-sm text-slate-700">
         <span className="rounded-xl bg-emerald-100 p-2 text-emerald-700"><Cpu className="size-5" /></span>
         <div className="space-y-1">

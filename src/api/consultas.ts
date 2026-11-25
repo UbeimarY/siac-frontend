@@ -16,8 +16,13 @@ export const useIndicadoresOpciones = (programa?: string | number) =>
     queryKey: ['indicadores', 'opciones', programa ?? ''],
     queryFn: () => api.get<{ id: number; codigo: string; nombre: string; programa_id: number }[]>('indicadores/opciones/', { programa }),
   })
+/** Estado de la IA Beta; mientras se entrena, se consulta cada 5 segundos hasta que termine. */
 export const useEstadoIABeta = () =>
-  useQuery({ queryKey: ['ia-beta', 'estado'], queryFn: () => api.get<EstadoIABeta>('ia/beta/estado/') })
+  useQuery({
+    queryKey: ['ia-beta', 'estado'],
+    queryFn: () => api.get<EstadoIABeta>('ia/beta/estado/'),
+    refetchInterval: (q) => (q.state.data?.entrenando ? 5000 : false),
+  })
 export const usePrediccionesBeta = (filtros: { programa?: string | number; indicador?: string | number } = {}, activo = true) =>
   useQuery({
     queryKey: ['ia-beta', 'predicciones', filtros],
